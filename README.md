@@ -65,26 +65,50 @@ cd ..
 
 ### Manual Setup - Windows (NVIDIA GPU)
 
-**Prerequisites:**
-- Python 3.10+ (from [python.org](https://www.python.org/downloads/))
-- Node.js 18+ (from [nodejs.org](https://nodejs.org/))
-- NVIDIA GPU with CUDA support
-- [CUDA Toolkit 12.x](https://developer.nvidia.com/cuda-downloads) installed
-- [cuDNN](https://developer.nvidia.com/cudnn) (optional, for extra performance)
+#### Prerequisites (Install in Order)
+
+| # | Software | Download Link | Notes |
+|---|----------|---------------|-------|
+| 1 | **Python 3.10+** | [python.org/downloads](https://www.python.org/downloads/) | ✅ Check "Add Python to PATH" during install |
+| 2 | **Node.js 18+** | [nodejs.org](https://nodejs.org/) | LTS version recommended |
+| 3 | **NVIDIA Driver** | [nvidia.com/drivers](https://www.nvidia.com/Download/index.aspx) | Latest Game Ready or Studio driver |
+| 4 | **CUDA Toolkit 12.x** | [developer.nvidia.com/cuda-downloads](https://developer.nvidia.com/cuda-downloads) | Required for GPU acceleration |
+| 5 | **Visual Studio Build Tools** | [visualstudio.microsoft.com/visual-cpp-build-tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) | Select "Desktop development with C++" |
+| 6 | **CMake** | [cmake.org/download](https://cmake.org/download/) | Or: `winget install Kitware.CMake` |
+
+> **⚠️ Important**: After installing Visual Studio Build Tools, run the setup from **"x64 Native Tools Command Prompt for VS 2022"** (search in Start Menu), NOT regular PowerShell!
+
+#### Quick Setup (Automated)
 
 ```powershell
-# 1. Backend setup (PowerShell)
+# Run from "x64 Native Tools Command Prompt for VS 2022"
+.\setup_windows.bat
+```
+
+The setup script will:
+1. Check all prerequisites
+2. Try pre-built CUDA wheels first (no compilation needed!)
+3. Fall back to building from source if needed
+
+#### Manual Setup (Step by Step)
+
+```powershell
+# Open "x64 Native Tools Command Prompt for VS 2022" from Start Menu
+cd path\to\local_ai_chat_app
+
+# 1. Backend setup
 cd backend
 python -m venv venv
 .\venv\Scripts\Activate.ps1
 pip install --upgrade pip
 
 # Install llama-cpp-python with CUDA support
-# Option A: Pre-built wheel (faster, recommended)
+# Option A: Pre-built wheel (faster, try this first!)
 pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124
 
-# Option B: Build from source (if Option A fails)
+# Option B: If Option A fails, build from source
 $env:CMAKE_ARGS="-DGGML_CUDA=on"
+$env:FORCE_CMAKE="1"
 pip install llama-cpp-python --force-reinstall --no-cache-dir
 
 # Install other dependencies
@@ -98,8 +122,32 @@ cd frontend
 npm install
 cd ..
 
-# 3. Start the app (use the Windows start script)
+# 3. Start the app
 .\start_windows.bat
+```
+
+#### Troubleshooting Windows Installation
+
+**Error: `pip install llama-cpp-python` fails**
+
+1. **"cl.exe not found"** → Run from "x64 Native Tools Command Prompt", not regular PowerShell
+2. **"CUDA not found"** → Add CUDA to PATH:
+   ```powershell
+   $env:PATH = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.4\bin;" + $env:PATH
+   ```
+3. **"CMake not found"** → Install CMake and restart terminal
+
+**Error: `nvcc not found`**
+```powershell
+# Add CUDA to system PATH (run as Administrator)
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v12.4\bin", "Machine")
+# Restart your terminal
+```
+
+**Still not working?** Try CPU-only mode (slower but works):
+```powershell
+pip install llama-cpp-python  # No CUDA, uses CPU
+# Set GPU_LAYERS=0 when running
 ```
 
 ### Manual Setup - Linux (NVIDIA GPU)
