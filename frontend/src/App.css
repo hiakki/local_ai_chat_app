@@ -94,6 +94,29 @@
   color: var(--text-primary);
 }
 
+.toggle-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: transparent;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggle-btn:hover {
+  background: var(--bg-tertiary);
+}
+
+.toggle-btn.active {
+  background: rgba(88, 166, 255, 0.15);
+  border-color: var(--accent-primary);
+}
+
 /* Messages Container */
 .messages-container {
   flex: 1;
@@ -245,6 +268,52 @@
 .message-text h2:first-child,
 .message-text h3:first-child {
   margin-top: 0;
+}
+
+/* Performance Metrics */
+.message-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.metric {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  white-space: nowrap;
+}
+
+.metric-icon {
+  font-size: 0.85rem;
+}
+
+.metric:first-child {
+  color: var(--accent-secondary);
+  font-weight: 600;
+}
+
+.metric-detail {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+@media (max-width: 640px) {
+  .message-metrics {
+    gap: 0.375rem 0.75rem;
+    font-size: 0.7rem;
+  }
+  
+  .metric-detail {
+    display: none;
+  }
 }
 
 /* Typing Indicator */

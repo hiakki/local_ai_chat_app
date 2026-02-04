@@ -14,6 +14,8 @@ Reference: https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct
 
 import os
 import sys
+import time
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Generator, Optional
 
@@ -28,6 +30,27 @@ except ImportError:
     sys.exit(1)
 
 from huggingface_hub import hf_hub_download
+
+
+@dataclass
+class PerfMetrics:
+    """Performance metrics for a generation."""
+    prompt_tokens: int = 0
+    completion_tokens: int = 0
+    total_time_ms: float = 0
+    prompt_eval_time_ms: float = 0
+    completion_time_ms: float = 0
+    tokens_per_second: float = 0
+    
+    def to_dict(self) -> dict:
+        return {
+            "prompt_tokens": self.prompt_tokens,
+            "completion_tokens": self.completion_tokens,
+            "total_time_ms": round(self.total_time_ms, 2),
+            "prompt_eval_time_ms": round(self.prompt_eval_time_ms, 2),
+            "completion_time_ms": round(self.completion_time_ms, 2),
+            "tokens_per_second": round(self.tokens_per_second, 2),
+        }
 
 
 class LlamaTransformer:
@@ -333,6 +356,70 @@ class LlamaTransformer:
             stream=stream,
             stop=["<|eot_id|>", "<|end_of_text|>"],
         )
+    
+    def chat_with_metrics(
+        self,
+        messages: list[dict],
+        max_tokens: int = 512,
+        temperature: float = 0.7,
+    ) -> Generator[tuple[str | None, PerfMetrics | None], None, None]:
+        """
+        Chat completion with performance metrics tracking.
+        
+        Yields (token, None) for each token, then (None, PerfMetrics) at the end.
+        
+        Args:
+            messages: List of {"role": "user/assistant/system", "content": "..."}
+            max_tokens: Maximum tokens to generate
+            temperature: Sampling temperature
+            
+        Yields:
+            Tuples of (token, None) during generation, (None, metrics) at end
+        """
+        prompt = self._format_chat_prompt(messages)
+        
+        # Estimate prompt tokens (rough approximation)
+        prompt_tokens = len(prompt) // 4  # ~4 chars per token on average
+        
+        start_time = time.perf_counter()
+        first_token_time = None
+        token_count = 0
+        
+        for output in self.llm(
+            prompt,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            top_p=0.9,
+            top_k=40,
+            repeat_penalty=1.1,
+            stop=["<|eot_id|>", "<|end_of_text|>"],
+            echo=False,
+            stream=True,
+        ):
+            token = output["choices"][0]["text"]
+            if first_token_time is None:
+                first_token_time = time.perf_counter()
+            token_count += 1
+            yield (token, None)
+        
+        end_time = time.perf_counter()
+        
+        # Calculate metrics
+        total_time_ms = (end_time - start_time) * 1000
+        prompt_eval_time_ms = ((first_token_time or end_time) - start_time) * 1000
+        completion_time_ms = (end_time - (first_token_time or start_time)) * 1000
+        tokens_per_second = (token_count / completion_time_ms * 1000) if completion_time_ms > 0 else 0
+        
+        metrics = PerfMetrics(
+            prompt_tokens=prompt_tokens,
+            completion_tokens=token_count,
+            total_time_ms=total_time_ms,
+            prompt_eval_time_ms=prompt_eval_time_ms,
+            completion_time_ms=completion_time_ms,
+            tokens_per_second=tokens_per_second,
+        )
+        
+        yield (None, metrics)
     
     def _format_chat_prompt(self, messages: list[dict]) -> str:
         """Format messages using Llama 3.3 chat template."""

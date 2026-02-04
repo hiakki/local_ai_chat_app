@@ -5,11 +5,12 @@ import './App.css'
 const SYSTEM_PROMPT = "You are a helpful AI assistant powered by Llama 3.3 70B. Be concise but thorough."
 
 function App() {
-  const [messages, setMessages] = useState([])
+  const [messages, setMessages] = useState([])  // Each message can have { role, content, metrics? }
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [serverStatus, setServerStatus] = useState('checking')
   const [modelInfo, setModelInfo] = useState(null)
+  const [showMetrics, setShowMetrics] = useState(true)  // Toggle metrics display
   const messagesEndRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -79,6 +80,7 @@ function App() {
       const reader = response.body.getReader()
       const decoder = new TextDecoder()
       let assistantMessage = ''
+      let messageMetrics = null
 
       // Add empty assistant message
       setMessages(prev => [...prev, { role: 'assistant', content: '' }])
@@ -101,6 +103,19 @@ function App() {
                   newMessages[newMessages.length - 1] = {
                     role: 'assistant',
                     content: assistantMessage,
+                  }
+                  return newMessages
+                })
+              }
+              // Capture metrics when done
+              if (data.done && data.metrics) {
+                messageMetrics = data.metrics
+                setMessages(prev => {
+                  const newMessages = [...prev]
+                  newMessages[newMessages.length - 1] = {
+                    role: 'assistant',
+                    content: assistantMessage,
+                    metrics: messageMetrics,
                   }
                   return newMessages
                 })
@@ -151,6 +166,13 @@ function App() {
             {serverStatus === 'connected' ? 'Connected' : 
              serverStatus === 'checking' ? 'Checking...' : 'Disconnected'}
           </div>
+          <button 
+            className={`toggle-btn ${showMetrics ? 'active' : ''}`} 
+            onClick={() => setShowMetrics(!showMetrics)}
+            title={showMetrics ? 'Hide performance metrics' : 'Show performance metrics'}
+          >
+            📊
+          </button>
           {messages.length > 0 && (
             <button className="clear-btn" onClick={clearChat}>
               Clear Chat
@@ -199,6 +221,29 @@ function App() {
                       message.content
                     )}
                   </div>
+                  {/* Performance metrics */}
+                  {message.metrics && showMetrics && (
+                    <div className="message-metrics">
+                      <span className="metric">
+                        <span className="metric-icon">⚡</span>
+                        {message.metrics.tokens_per_second} tok/s
+                      </span>
+                      <span className="metric">
+                        <span className="metric-icon">📝</span>
+                        {message.metrics.completion_tokens} tokens
+                      </span>
+                      <span className="metric">
+                        <span className="metric-icon">⏱️</span>
+                        {(message.metrics.total_time_ms / 1000).toFixed(1)}s
+                      </span>
+                      <span className="metric metric-detail">
+                        prompt: {(message.metrics.prompt_eval_time_ms / 1000).toFixed(1)}s
+                      </span>
+                      <span className="metric metric-detail">
+                        gen: {(message.metrics.completion_time_ms / 1000).toFixed(1)}s
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from llama_transformer import LlamaTransformer, get_transformer
+from llama_transformer import LlamaTransformer, get_transformer, PerfMetrics
 
 
 # Configuration from environment
@@ -170,21 +170,26 @@ async def stream_chat(
     max_tokens: int,
     temperature: float,
 ):
-    """Generator for SSE streaming."""
+    """Generator for SSE streaming with performance metrics."""
     try:
-        for token in transformer.chat(
+        for token, metrics in transformer.chat_with_metrics(
             messages,
             max_tokens=max_tokens,
             temperature=temperature,
-            stream=True,
         ):
-            # SSE format
-            data = json.dumps({"token": token, "done": False})
-            yield f"data: {data}\n\n"
-            await asyncio.sleep(0)  # Allow other tasks to run
-        
-        # Send done signal
-        yield f"data: {json.dumps({'token': '', 'done': True})}\n\n"
+            if token is not None:
+                # Streaming token
+                data = json.dumps({"token": token, "done": False})
+                yield f"data: {data}\n\n"
+                await asyncio.sleep(0)  # Allow other tasks to run
+            elif metrics is not None:
+                # Final message with metrics
+                data = json.dumps({
+                    "token": "",
+                    "done": True,
+                    "metrics": metrics.to_dict(),
+                })
+                yield f"data: {data}\n\n"
     except Exception as e:
         yield f"data: {json.dumps({'error': str(e), 'done': True})}\n\n"
 
