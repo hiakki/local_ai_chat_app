@@ -1,11 +1,19 @@
 # Llama 3.3 70B Chat
 
-A full-stack chat application for Meta's **Llama 3.3 70B Instruct** model running locally on Mac with Apple Silicon.
+A full-stack chat application running **bartowski's GGUF quantized versions** of Llama 3.3 70B Instruct locally.
 
-**Reference**: [meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct)
+**Supported Platforms:**
+- ✅ **macOS** with Apple Silicon (M1/M2/M3/M4) - Metal GPU acceleration
+- ✅ **Windows** with NVIDIA GPUs (RTX 3060, 3070, 3080, 4060, 4070, 4080, 4090, 5060, etc.) - CUDA acceleration
+- ✅ **Linux** with NVIDIA GPUs - CUDA acceleration
+
+**GGUF Models**: [bartowski/Llama-3.3-70B-Instruct-GGUF](https://huggingface.co/bartowski/Llama-3.3-70B-Instruct-GGUF)
+
+**Original Model**: [meta-llama/Llama-3.3-70B-Instruct](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct) (by Meta)
 
 ## 🚀 Quick Start (Full-Stack App)
 
+### macOS / Linux
 ```bash
 # One-time setup
 ./setup_fullstack.sh
@@ -14,9 +22,18 @@ A full-stack chat application for Meta's **Llama 3.3 70B Instruct** model runnin
 ./start.sh
 ```
 
+### Windows (PowerShell)
+```powershell
+# One-time setup
+.\setup_windows.bat
+
+# Start the application
+.\start_windows.bat
+```
+
 Then open **http://localhost:5173** in your browser!
 
-### Manual Setup (if setup script fails)
+### Manual Setup - macOS (Apple Silicon)
 
 If `setup_fullstack.sh` has issues, set up manually:
 
@@ -30,6 +47,73 @@ pip install --upgrade pip      # Upgrade pip
 
 # Install llama-cpp-python with Metal support (takes 5-10 min)
 CMAKE_ARGS="-DLLAMA_METAL=on" pip install llama-cpp-python --force-reinstall --no-cache-dir
+
+# Install other dependencies
+pip install -r requirements.txt
+
+deactivate
+cd ..
+
+# 2. Frontend setup
+cd frontend
+npm install
+cd ..
+
+# 3. Start the app
+./start.sh
+```
+
+### Manual Setup - Windows (NVIDIA GPU)
+
+**Prerequisites:**
+- Python 3.10+ (from [python.org](https://www.python.org/downloads/))
+- Node.js 18+ (from [nodejs.org](https://nodejs.org/))
+- NVIDIA GPU with CUDA support
+- [CUDA Toolkit 12.x](https://developer.nvidia.com/cuda-downloads) installed
+- [cuDNN](https://developer.nvidia.com/cudnn) (optional, for extra performance)
+
+```powershell
+# 1. Backend setup (PowerShell)
+cd backend
+python -m venv venv
+.\venv\Scripts\Activate.ps1
+pip install --upgrade pip
+
+# Install llama-cpp-python with CUDA support
+# Option A: Pre-built wheel (faster, recommended)
+pip install llama-cpp-python --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124
+
+# Option B: Build from source (if Option A fails)
+$env:CMAKE_ARGS="-DGGML_CUDA=on"
+pip install llama-cpp-python --force-reinstall --no-cache-dir
+
+# Install other dependencies
+pip install -r requirements.txt
+
+deactivate
+cd ..
+
+# 2. Frontend setup
+cd frontend
+npm install
+cd ..
+
+# 3. Start the app (use the Windows start script)
+.\start_windows.bat
+```
+
+### Manual Setup - Linux (NVIDIA GPU)
+
+```bash
+# 1. Backend setup
+cd backend
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip install --upgrade pip
+
+# Install llama-cpp-python with CUDA support
+CMAKE_ARGS="-DGGML_CUDA=on" pip install llama-cpp-python --force-reinstall --no-cache-dir
 
 # Install other dependencies
 pip install -r requirements.txt
@@ -76,9 +160,12 @@ local_ai_chat_app/
 │   ├── llama_transformer.py  # LLM wrapper (internal module)
 │   └── requirements.txt
 │
-├── brew_setup/           # Homebrew CLI alternative
-├── setup_fullstack.sh    # Full-stack setup script
-├── start.sh              # Start both frontend + backend
+├── brew_setup/           # Homebrew CLI alternative (macOS)
+│
+├── setup_fullstack.sh    # Setup script (macOS/Linux)
+├── setup_windows.bat     # Setup script (Windows)
+├── start.sh              # Start app (macOS/Linux)
+├── start_windows.bat     # Start app (Windows)
 └── README.md
 ```
 
@@ -88,23 +175,101 @@ local_ai_chat_app/
 
 Running a 70B parameter model (normally ~140GB in FP16) efficiently requires:
 
-1. **Quantization**: Compress to 4-8 bits per weight
+1. **Quantization**: Compress to 1-8 bits per weight (from 16-bit)
 2. **Memory Mapping (mmap)**: Stream model layers from disk on-demand
-3. **Metal GPU Acceleration**: Leverage Apple Silicon's unified memory
+3. **GPU Acceleration**: Metal (Apple Silicon) or CUDA (NVIDIA GPUs)
 
-| Quantization | Model Size | RAM Needed | Quality |
-|--------------|------------|------------|---------|
-| IQ2_XXS | ~19GB | 10GB+ | Extreme compression |
-| Q2_K | ~26GB | 12GB+ | Low quality |
-| Q3_K_S | ~31GB | 16GB+ | Medium quality |
-| IQ3_M | ~32GB | 18GB+ | Medium quality (I-quant) |
-| Q3_K_M | ~34GB | 20GB+ | Medium-good quality |
-| Q3_K_XL | ~38GB | 24GB+ | Good quality (Q8 embed/output) |
-| Q4_K_S | ~40GB | 24GB+ | Good quality |
-| **Q4_K_M** | **~43GB** | **32GB+** | **Very good (recommended)** |
-| Q4_K_L | ~43GB | 32GB+ | Excellent (Q8 embed/output) |
-| Q5_K_S | ~49GB | 48GB+ | High quality |
-| Q5_K_M | ~50GB | 48GB+ | High quality |
+### All Available Quantizations
+
+Full list from [bartowski/Llama-3.3-70B-Instruct-GGUF](https://huggingface.co/bartowski/Llama-3.3-70B-Instruct-GGUF):
+
+| Quantization | Size | RAM | Quality | Notes |
+|--------------|------|-----|---------|-------|
+| **1-bit** |||||
+| IQ1_M | ~17GB | 10GB+ | Extreme | Lowest quality, smallest |
+| **2-bit** |||||
+| IQ2_XXS | ~19GB | 10GB+ | Extreme | Smallest 2-bit |
+| IQ2_XS | ~21GB | 11GB+ | Extreme | Very aggressive |
+| IQ2_S | ~22GB | 12GB+ | Low | I-quant |
+| IQ2_M | ~24GB | 14GB+ | Low | I-quant |
+| Q2_K | ~26GB | 14GB+ | Low | K-quant |
+| Q2_K_L | ~27GB | 16GB+ | Low | Q8 embed/output |
+| **3-bit** |||||
+| IQ3_XXS | ~28GB | 16GB+ | Medium-low | I-quant |
+| IQ3_XS | ~29GB | 16GB+ | Medium-low | I-quant |
+| Q3_K_S | ~31GB | 18GB+ | Medium | K-quant small |
+| IQ3_M | ~32GB | 18GB+ | Medium | I-quant |
+| Q3_K_M | ~34GB | 20GB+ | Medium-good | K-quant medium |
+| Q3_K_L | ~37GB | 22GB+ | Good | K-quant large |
+| Q3_K_XL | ~38GB | 24GB+ | Good | Q8 embed/output |
+| **4-bit** |||||
+| IQ4_XS | ~38GB | 24GB+ | Good | I-quant 4-bit |
+| Q4_0 | ~40GB | 24GB+ | Good | Legacy, ARM optimized |
+| IQ4_NL | ~40GB | 24GB+ | Good | ARM optimized |
+| Q4_K_S | ~40GB | 24GB+ | Good | K-quant small |
+| Q4_0_4_4 | ~40GB | 24GB+ | Good | ARM NEON optimized |
+| Q4_0_4_8 | ~40GB | 24GB+ | Good | ARM SVE 256 optimized |
+| Q4_0_8_8 | ~40GB | 24GB+ | Good | AVX2/AVX512 optimized |
+| **Q4_K_M** | **~43GB** | **32GB+** | **Very good** | **Recommended default** |
+| Q4_K_L | ~43GB | 32GB+ | Excellent | Q8 embed/output |
+| **5-bit** |||||
+| Q5_K_S | ~49GB | 48GB+ | High | K-quant small |
+| Q5_K_M | ~50GB | 48GB+ | High | K-quant medium, recommended |
+| Q5_K_L | ~51GB | 48GB+ | High | Q8 embed/output |
+| **6-bit** |||||
+| Q6_K | ~58GB | 64GB+ | Very high | Near perfect |
+| Q6_K_L | ~58GB | 64GB+ | Very high | Q8 embed/output |
+| **8-bit** |||||
+| Q8_0 | ~75GB | 80GB+ | Excellent | Max available quant |
+| **16-bit** |||||
+| F16 | ~141GB | 160GB+ | Perfect | Full precision |
+
+> **💡 Tip**: For Apple Silicon Macs, use K-quants (Q4_K_M, Q5_K_M, etc.) for best performance. I-quants (IQ3_M, IQ4_XS) offer better quality at the same size but may be slower on Metal.
+
+### 🎮 NVIDIA GPU Recommendations
+
+For Windows/Linux with NVIDIA GPUs, the model is split between **VRAM** (fast) and **System RAM** (slower). More layers on GPU = faster inference.
+
+| GPU | VRAM | Recommended Quant | GPU Layers | System RAM Needed |
+|-----|------|-------------------|------------|-------------------|
+| **RTX 3060** | 12GB | IQ2_XXS, IQ2_XS | 20-25 | 16GB+ |
+| **RTX 3070** | 8GB | IQ1_M, IQ2_XXS | 15-20 | 24GB+ |
+| **RTX 3070 Ti** | 8GB | IQ1_M, IQ2_XXS | 15-20 | 24GB+ |
+| **RTX 3080** | 10GB | IQ2_XXS, IQ2_XS | 18-22 | 20GB+ |
+| **RTX 3090** | 24GB | Q3_K_S, IQ3_M | 35-45 | 16GB+ |
+| **RTX 4060** | 8GB | IQ1_M, IQ2_XXS | 15-20 | 24GB+ |
+| **RTX 4060 Ti** | 8/16GB | IQ2_XXS / Q2_K | 15-25 | 20GB+ |
+| **RTX 4070** | 12GB | IQ2_XS, Q2_K | 22-28 | 20GB+ |
+| **RTX 4070 Ti** | 12GB | IQ2_XS, Q2_K | 22-28 | 20GB+ |
+| **RTX 4080** | 16GB | Q2_K, Q3_K_S | 28-35 | 16GB+ |
+| **RTX 4090** | 24GB | Q3_K_M, IQ3_M | 40-50 | 16GB+ |
+| **RTX 5060** | 8GB* | IQ1_M, IQ2_XXS | 15-20 | 24GB+ |
+| **RTX 5070** | 12GB* | IQ2_XS, Q2_K | 22-28 | 20GB+ |
+| **RTX 5080** | 16GB* | Q2_K, Q3_K_S | 28-35 | 16GB+ |
+| **RTX 5090** | 32GB* | Q4_K_S, Q4_K_M | 50-60 | 16GB+ |
+
+\* RTX 50-series specs are estimated based on expected configurations.
+
+#### Example Commands for NVIDIA GPUs
+
+```powershell
+# RTX 4060 (8GB VRAM) - Windows
+$env:MODEL_PATH="C:\llama-models"
+$env:QUANT="IQ2_XXS"
+$env:CTX="1024"
+$env:GPU_LAYERS="18"
+.\start_windows.bat
+
+# RTX 4090 (24GB VRAM) - Linux
+MODEL_PATH=~/llama-models QUANT=Q3_K_M CTX=2048 GPU_LAYERS=45 ./start.sh
+
+# RTX 3070 Ti (8GB VRAM) - Lower context for stability
+MODEL_PATH=~/llama-models QUANT=IQ2_XXS CTX=512 GPU_LAYERS=15 ./start.sh
+```
+
+> **⚠️ VRAM vs RAM**: Unlike Apple Silicon's unified memory, NVIDIA GPUs have separate VRAM. If the model doesn't fit in VRAM, layers are offloaded to CPU (slower). Use `GPU_LAYERS` to control how many layers go to GPU.
+
+> **💡 Performance Tip**: Start with fewer GPU layers and increase until you hit VRAM limits. Watch for "CUDA out of memory" errors.
 
 ## 🚀 Quick Start
 
@@ -346,11 +511,18 @@ cd backend
 python llama_transformer.py -m ~/.cache/huggingface/hub/.../Llama-3.3-70B-Instruct-Q3_K_S.gguf
 ```
 
-## 📝 License
+## 📝 Credits & License
 
-This code is provided for educational purposes. The Llama 3.3 model is subject to Meta's [Llama 3.3 Community License](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct).
+### GGUF Quantizations
+The quantized GGUF models used in this project are provided by **[bartowski](https://huggingface.co/bartowski)**. These quantizations make it possible to run the 70B model on consumer hardware.
+
+### Original Model
+The base Llama 3.3 70B Instruct model is created by **Meta** and subject to the [Llama 3.3 Community License](https://huggingface.co/meta-llama/Llama-3.3-70B-Instruct).
 
 Key requirements:
 - Accept the license on Hugging Face before use
 - Display "Built with Llama" for public applications
 - Monthly active users > 700M require separate license from Meta
+
+### This Code
+This application code is provided for educational purposes.

@@ -64,12 +64,22 @@ class LlamaTransformer:
     """
     
     # Quantization options from smallest to largest
+    # Full list from: https://huggingface.co/bartowski/Llama-3.3-70B-Instruct-GGUF
     # For 48GB RAM, Q4_K_M recommended (best quality/size balance)
     # For 16GB RAM, Q3_K_S or Q2_K recommended
     QUANT_OPTIONS = {
+        # ============ 1-bit quantization ============
+        "IQ1_M": {
+            "size_gb": 17,
+            "quality": "Extreme quantization, lowest quality",
+            "recommended_ram": "10GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-IQ1_M.gguf"
+        },
+        # ============ 2-bit quantization ============
         "IQ2_XXS": {
             "size_gb": 19,
-            "quality": "Extreme quantization, smallest",
+            "quality": "Extreme quantization, smallest 2-bit",
             "recommended_ram": "10GB+",
             "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
             "filename": "Llama-3.3-70B-Instruct-IQ2_XXS.gguf"
@@ -81,17 +91,53 @@ class LlamaTransformer:
             "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
             "filename": "Llama-3.3-70B-Instruct-IQ2_XS.gguf"
         },
+        "IQ2_S": {
+            "size_gb": 22,
+            "quality": "Aggressive quantization (I-quant)",
+            "recommended_ram": "12GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-IQ2_S.gguf"
+        },
+        "IQ2_M": {
+            "size_gb": 24,
+            "quality": "Aggressive quantization (I-quant)",
+            "recommended_ram": "14GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-IQ2_M.gguf"
+        },
         "Q2_K": {
             "size_gb": 26,
             "quality": "Low quality, small size",
-            "recommended_ram": "12GB+",
+            "recommended_ram": "14GB+",
             "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
             "filename": "Llama-3.3-70B-Instruct-Q2_K.gguf"
+        },
+        "Q2_K_L": {
+            "size_gb": 27,
+            "quality": "Low quality (Q8 embed/output)",
+            "recommended_ram": "16GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-Q2_K_L.gguf"
+        },
+        # ============ 3-bit quantization ============
+        "IQ3_XXS": {
+            "size_gb": 28,
+            "quality": "Medium-low quality (I-quant)",
+            "recommended_ram": "16GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-IQ3_XXS.gguf"
+        },
+        "IQ3_XS": {
+            "size_gb": 29,
+            "quality": "Medium-low quality (I-quant)",
+            "recommended_ram": "16GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-IQ3_XS.gguf"
         },
         "Q3_K_S": {
             "size_gb": 31,
             "quality": "Medium quality",
-            "recommended_ram": "16GB+",
+            "recommended_ram": "18GB+",
             "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
             "filename": "Llama-3.3-70B-Instruct-Q3_K_S.gguf"
         },
@@ -109,6 +155,13 @@ class LlamaTransformer:
             "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
             "filename": "Llama-3.3-70B-Instruct-Q3_K_M.gguf"
         },
+        "Q3_K_L": {
+            "size_gb": 37,
+            "quality": "Good quality (larger 3-bit)",
+            "recommended_ram": "22GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-Q3_K_L.gguf"
+        },
         "Q3_K_XL": {
             "size_gb": 38,
             "quality": "Good quality (Q8 embed/output)",
@@ -116,12 +169,55 @@ class LlamaTransformer:
             "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
             "filename": "Llama-3.3-70B-Instruct-Q3_K_XL.gguf"
         },
+        # ============ 4-bit quantization ============
+        "IQ4_XS": {
+            "size_gb": 38,
+            "quality": "Good quality (I-quant 4-bit)",
+            "recommended_ram": "24GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-IQ4_XS.gguf"
+        },
+        "Q4_0": {
+            "size_gb": 40,
+            "quality": "Legacy format, ARM CPU optimization",
+            "recommended_ram": "24GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-Q4_0.gguf"
+        },
+        "IQ4_NL": {
+            "size_gb": 40,
+            "quality": "Similar to IQ4_XS, ARM CPU optimization",
+            "recommended_ram": "24GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-IQ4_NL.gguf"
+        },
         "Q4_K_S": {
             "size_gb": 40,
-            "quality": "Good quality",
+            "quality": "Good quality, slightly lower than Q4_K_M",
             "recommended_ram": "24GB+",
             "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
             "filename": "Llama-3.3-70B-Instruct-Q4_K_S.gguf"
+        },
+        "Q4_0_4_4": {
+            "size_gb": 40,
+            "quality": "ARM CPU optimized (NEON)",
+            "recommended_ram": "24GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-Q4_0_4_4.gguf"
+        },
+        "Q4_0_4_8": {
+            "size_gb": 40,
+            "quality": "ARM CPU optimized (SVE 256)",
+            "recommended_ram": "24GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-Q4_0_4_8.gguf"
+        },
+        "Q4_0_8_8": {
+            "size_gb": 40,
+            "quality": "AVX2/AVX512 CPU optimized",
+            "recommended_ram": "24GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-Q4_0_8_8.gguf"
         },
         "Q4_K_M": {
             "size_gb": 43,
@@ -137,6 +233,7 @@ class LlamaTransformer:
             "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
             "filename": "Llama-3.3-70B-Instruct-Q4_K_L.gguf"
         },
+        # ============ 5-bit quantization ============
         "Q5_K_S": {
             "size_gb": 49,
             "quality": "High quality",
@@ -146,10 +243,48 @@ class LlamaTransformer:
         },
         "Q5_K_M": {
             "size_gb": 50,
-            "quality": "High quality",
+            "quality": "High quality, recommended",
             "recommended_ram": "48GB+",
             "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
             "filename": "Llama-3.3-70B-Instruct-Q5_K_M.gguf"
+        },
+        "Q5_K_L": {
+            "size_gb": 51,
+            "quality": "High quality (Q8 embed/output)",
+            "recommended_ram": "48GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-Q5_K_L.gguf"
+        },
+        # ============ 6-bit quantization ============
+        "Q6_K": {
+            "size_gb": 58,
+            "quality": "Very high quality, near perfect",
+            "recommended_ram": "64GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-Q6_K.gguf"
+        },
+        "Q6_K_L": {
+            "size_gb": 58,
+            "quality": "Very high quality (Q8 embed/output)",
+            "recommended_ram": "64GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-Q6_K_L.gguf"
+        },
+        # ============ 8-bit quantization ============
+        "Q8_0": {
+            "size_gb": 75,
+            "quality": "Extremely high quality, max available",
+            "recommended_ram": "80GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-Q8_0.gguf"
+        },
+        # ============ 16-bit (full precision) ============
+        "F16": {
+            "size_gb": 141,
+            "quality": "Full F16 weights, original precision",
+            "recommended_ram": "160GB+",
+            "repo": "bartowski/Llama-3.3-70B-Instruct-GGUF",
+            "filename": "Llama-3.3-70B-Instruct-f16.gguf"
         },
     }
     
